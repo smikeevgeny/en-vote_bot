@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"os"
 	"strconv"
@@ -13,8 +14,9 @@ import (
 )
 
 type Configuration struct {
-	TgAPIToken string `json:"TgAPIToken"`
-	repo_token string `json:"repo_token"`
+	TgAPIToken       string `json:"TgAPIToken"`
+	repo_token       string `json:"repo_token"`
+	cAllowedVideoExt string `json:"allowed_video_extensions"`
 }
 type Account struct {
 	ID         int64  `xorm:"Int pk autoincr not null unique 'id'"`
@@ -45,9 +47,10 @@ func (c *CachedAccount) GetCtx() int8 {
 }
 
 var (
-	engine         *xorm.Engine
-	cachedAccounts = make(map[int]*CachedAccount)
-	configuration  Configuration
+	engine          *xorm.Engine
+	cachedAccounts  = make(map[int]*CachedAccount)
+	configuration   Configuration
+	allowedVideoExt = make(map[string]bool)
 )
 
 func errh(err error) {
@@ -88,8 +91,21 @@ func main() {
 	err := decoder.Decode(&configuration)
 	errh(err)
 	engine = dbInit()
+	var action string
+	flag.StringVar(&action, "a", "start", "a string")
+	//action := flag.String("a", "start", "a string")
+	flag.Parse()
+	cli := cliInit()
+	cli.Run(action)
+	//if *action != "start" {
+	//	actionHandler(action)
+	//}
+
 	bot, err := tgbotapi.NewBotAPI(configuration.TgAPIToken)
 	errh(err)
+	for _, v := range configuration.cAllowedVideoExt {
+		allowedVideoExt[string(v)] = true
+	}
 
 	bot.Debug = false
 
@@ -113,11 +129,12 @@ func main() {
 			msg.ReplyToMessageID = update.Message.MessageID
 			bot.Send(msg)
 		} else {
+			// router must be here, yoba!
 			if update.Message.IsCommand() {
 				msg := cmdWrapper(update.Message)
 				bot.Send(msg)
-			} else if update.Message.Voice != nil {
-				VoiceWrapper(bot, update.Message)
+			} else if update.Message.Document != nil {
+				DocumentWrapper(bot, update.Message)
 
 			} else {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "неправильный ввод, я потом запилю командлист")

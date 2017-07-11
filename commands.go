@@ -4,10 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"fmt"
-
-	"unsafe"
-
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
@@ -25,6 +21,31 @@ func VoiceWrapper(bot *tgbotapi.BotAPI, Msg *tgbotapi.Message) {
 	}
 
 }
+
+func DocumentWrapper(bot *tgbotapi.BotAPI, Msg *tgbotapi.Message) {
+	//r, _ := bot.GetFileDirectURL(Msg.Voice.FileID)
+	switch cachedAccounts[Msg.From.ID].GetCtx() {
+	case 126:
+		fileDS := strings.Split(Msg.Document.FileName, ".")
+		if allowedVideoExt[fileDS[len(fileDS)-1]] {
+			MsgConf := tgbotapi.NewMessage(Msg.Chat.ID, "Yooopta!")
+			bot.Send(MsgConf)
+		} else {
+			//aExt, err := json.MarshalIndent(allowedVideoExt, "", "\t")
+			//errh(err)
+			//здеся блядь паника, сука, ебаный мэп!
+			MsgConf := tgbotapi.NewMessage(Msg.Chat.ID, "Это чо бля?!/n")
+			bot.Send(MsgConf)
+		}
+		//cachedAccounts[Msg.From.ID].SetCtx("0")
+		return
+
+	default:
+		MsgConf := tgbotapi.NewMessage(Msg.Chat.ID, "Bye!")
+		bot.Send(MsgConf)
+	}
+
+}
 func cmdWrapper(Msg *tgbotapi.Message) (MsgConf tgbotapi.MessageConfig) {
 	switch Msg.Command() {
 	case "auth":
@@ -34,17 +55,14 @@ func cmdWrapper(Msg *tgbotapi.Message) (MsgConf tgbotapi.MessageConfig) {
 		}
 		creds := strings.Split(Msg.CommandArguments(), " ")
 		MsgConf = authenticateUser(creds, Msg.From, Msg)
-
-	case "hello":
+	case "help":
 		MsgConf = tgbotapi.NewMessage(Msg.Chat.ID, "World")
-	case "rem":
-		MsgConf = tgbotapi.NewMessage(Msg.Chat.ID, "World")
-		cachedAccounts[Msg.From.ID].SetCtx("127")
-	case "lens":
-		r := fmt.Sprintf("%d", unsafe.Sizeof(cachedAccounts))
-		MsgConf = tgbotapi.NewMessage(Msg.Chat.ID, r)
 	case "me":
 		r, _ := json.MarshalIndent(cachedAccounts[Msg.From.ID], "", "\t")
+		MsgConf = tgbotapi.NewMessage(Msg.Chat.ID, string(r))
+	case "uplv":
+		cachedAccounts[Msg.From.ID].SetCtx("126")
+		r := "Грузи видосик, епта!"
 		MsgConf = tgbotapi.NewMessage(Msg.Chat.ID, string(r))
 	case "setctx":
 		cachedAccounts[Msg.From.ID].SetCtx(Msg.CommandArguments())
